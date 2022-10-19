@@ -3,3 +3,4 @@ module "test_sample" {
 
   resource_name_prefix = local.resource_name_prefix
 }
+

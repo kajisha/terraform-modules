@@ -8,12 +8,7 @@ CWD = "../terraform/root"
 
 def pytest_addoption(parser):
     """Add pytest command options."""
-    parser.addoption(
-        "--no-destroy",
-        action="store_true",
-        default=False,
-        help="not destroy when pytest end",
-    )
+    parser.addoption("--no-destroy", action="store_true", default=False, help="not destroy when pytest end")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -22,7 +17,7 @@ def tf_init_final(request):
 
     # object生成の遅延によるエラー防止のため、とりあえずterraform applyする
     exec_cmd(
-        ["terraform", "apply", "-lock=false", "-auto-approve"],
+        ["terraform", "apply", "-lock=false", "-auto-approve", "-parallelism=5"],
         cwd=CWD,
         print_stdout=True,
         print_stderr=True,
@@ -41,10 +36,10 @@ def tf_init_final(request):
     )
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function", autouse=False)
 def reset():
     exec_cmd(
-        ["terraform", "apply", "-lock=false", "-auto-approve"],
+        ["terraform", "apply", "-lock=false", "-auto-approve", "-parallelism=5"],
         cwd=CWD,
         print_stdout=True,
         print_stderr=True,
@@ -52,7 +47,13 @@ def reset():
     return
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function", autouse=False)
 def tfstate(reset):
+    tfstate = Tfstate(CWD)
+    return tfstate
+
+
+@pytest.fixture(scope="function", autouse=False)
+def tfstate_no_reset():
     tfstate = Tfstate(CWD)
     return tfstate
