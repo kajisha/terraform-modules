@@ -8,8 +8,7 @@ def generate_boto3_session(aws_iam_role_arn, region_name="ap-northeast-1"):
     account_id = client.get_caller_identity()["Account"]
 
     response = client.assume_role(
-        RoleArn=aws_iam_role_arn,
-        RoleSessionName=str(uuid.uuid4()),  # FIXME: script名とかから引けるようにする
+        RoleArn=aws_iam_role_arn, RoleSessionName=str(uuid.uuid4())  # FIXME: script名とかから引けるようにする
     )
 
     session = boto3.session.Session(

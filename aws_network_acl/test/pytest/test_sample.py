@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from aws import generate_boto3_session
 from common import Tfstate
@@ -11,10 +13,87 @@ TF_TEST_MODULE_PATH = "module.{}".format(__name__.removeprefix("__").removesuffi
 # sample
 @pytest.fixture(
     params=[
-        {"role_type": "sample", "result": True},
+        {
+            "egress": "egress",
+            "rule_number": 1,
+            "result": {
+                "egress": True,
+                "rule_number": 1,
+                "rule_action": "allow",
+                "cidr_block": "10.1.0.0/32",
+                "from_port": 443,
+                "to_port": 443,
+                "protocol": "6",  # tcp
+            },
+        },
+        {
+            "egress": "egress",
+            "rule_number": 2,
+            "result": {
+                "egress": True,
+                "rule_number": 2,
+                "rule_action": "allow",
+                "cidr_block": "10.1.0.1/32",
+                "from_port": 443,
+                "to_port": 443,
+                "protocol": "6",  # tcp
+            },
+        },
+        {
+            "egress": "egress",
+            "rule_number": 101,
+            "result": {
+                "egress": True,
+                "rule_number": 101,
+                "rule_action": "deny",
+                "cidr_block": "0.0.0.0/0",
+                "from_port": None,
+                "to_port": None,
+                "protocol": "-1",
+            },
+        },
+        {
+            "egress": "ingress",
+            "rule_number": 1,
+            "result": {
+                "egress": False,
+                "rule_number": 1,
+                "rule_action": "allow",
+                "cidr_block": "10.1.0.0/32",
+                "from_port": None,
+                "to_port": None,
+                "protocol": "-1",
+            },
+        },
+        {
+            "egress": "ingress",
+            "rule_number": 2,
+            "result": {
+                "egress": False,
+                "rule_number": 2,
+                "rule_action": "allow",
+                "cidr_block": "10.1.0.1/32",
+                "from_port": None,
+                "to_port": None,
+                "protocol": "-1",
+            },
+        },
+        {
+            "egress": "ingress",
+            "rule_number": 101,
+            "result": {
+                "egress": False,
+                "rule_number": 101,
+                "rule_action": "deny",
+                "cidr_block": "0.0.0.0/0",
+                "from_port": None,
+                "to_port": None,
+                "protocol": "-1",
+            },
+        },
     ]
 )
-def sample_params(tfstate, request):
+def sample_params(tfstate_no_reset, request):
     """test_sampleのparamsを生成する
     その他、後始末処理関数の呼び出し
 
@@ -25,12 +104,15 @@ def sample_params(tfstate, request):
     Yields:
         dict: test_sample()で利用する引数
     """
-    # pre-proc
-    role_type = request.param["role_type"]
+    _tfstate = tfstate_no_reset
+    egress = request.param["egress"]
+    rule_number = request.param["rule_number"]
 
     params = {
         "kwargs": {
-            "aws_iam_role_arn": tfstate.get_attr(f'{TF_TEST_MODULE_PATH}.aws_iam_role.these["{role_type}"]')["arn"],
+            "aws_network_acl_rule": _tfstate.get_attr(
+                f'{TF_TEST_MODULE_PATH}.module.this.aws_network_acl_rule.these["{egress}_{rule_number}"]'
+            ),
         },
         "result": request.param["result"],
     }
@@ -52,11 +134,5 @@ def post_proc_for_test_sample(**kwargs):
 def test_sample(sample_params):
     params = sample_params
 
-    def _can_create_session(aws_iam_role_arn):
-        try:
-            session = generate_boto3_session(aws_iam_role_arn)
-        except Exception as e:
-            return False
-        return True
-
-    assert _can_create_session(**params["kwargs"]) == params["result"]
+    for key in params["result"].keys():
+        assert params["kwargs"]["aws_network_acl_rule"][key] == params["result"][key]

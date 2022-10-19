@@ -10,3 +10,5 @@ locals {
     unique_id = data.aws_caller_identity.current.user_id
   }
 }
+
+
