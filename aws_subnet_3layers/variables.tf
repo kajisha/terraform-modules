@@ -2,31 +2,66 @@ variable "resource_name_prefix" {
   type = string
 
   description = <<DESC
-リソース名に設定されるprefixの元となる文字列。
-module内のリソースの命名に利用する変数は local.resource_name_prefix であることに注意する。
+リソース名に設定されるprefix。
+命名ルールは locals.tf の命名セクションを参照。
 DESC
 }
 
 
-variable "append_module_name_to_resource_name_prefix" {
-  type    = bool
-  default = true
-
-  description = <<DESC
-true の場合、 local.resource_name_prefix の末尾に local.module_name を追加する。
-local.module_name の説明は、 var.module_name_suffix のdescriptionを参照。
-DESC
-}
-
-
-variable "module_name_suffix" {
+variable "resource_name_suffix" {
   type    = string
   default = ""
 
   description = <<DESC
-本引数に "" を指定した場合、 local.module_name は "{module名のディレクトリ名}" となる。
-本引数に "" 以外を指定した場合、 local.module_name は "{module名のディレクトリ名}-{var.module_name_suffix}" となる。
+リソース名に設定されるsuffix。
+命名ルールは locals.tf の命名セクションを参照。
+DESC
+}
 
-同一moduleを複数作成したい場合に利用する。
+
+variable "vpc_id" {
+  type = string
+}
+
+
+variable "availability_zone" {
+  type = string
+}
+
+
+variable "available_cidr_block" {
+  type = string
+}
+
+
+variable "subnets_structure" {
+  type = list(object({
+    layer       = string
+    subnet_mask = number
+  }))
+
+  validation {
+    # rule_action
+    condition = alltrue(
+      [for subnet in var.subnets_structure : contains(["web", "app", "database"], subnet["layer"])]
+    )
+    error_message = "The attribute of list `subnets_structure` must be \"web\", \"app\" or \"database\"."
+  }
+}
+
+
+variable "acl_rules" {
+  type = list(object({
+    rule_action = string
+    egress      = bool
+    protocol    = optional(string, "-1")
+    cidr_blocks = list(string)
+    from_port   = optional(number, null)
+    to_port     = optional(number, null)
+  }))
+  default = []
+
+  description = <<DESC
+defaultのルールに追加されるルール。
 DESC
 }
